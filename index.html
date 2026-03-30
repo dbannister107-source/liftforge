@@ -913,6 +913,8 @@ function LiftForge() {
     const [expanded, setExpanded] = useState(null);
     const [showCompare, setShowCompare] = useState(false);
     const [compareIds, setCompareIds] = useState([]);
+    const [showGymForm, setShowGymForm] = useState(false);
+    const [editGym, setEditGym] = useState(null);
     const ranked = useMemo(()=>[...gyms].sort((a,b)=>gymScore(b.ratings)-gymScore(a.ratings)),[gyms]);
     const ratingKeys = [{k:"equipment",l:"Equipment"},{k:"atmosphere",l:"Vibe"},{k:"cleanliness",l:"Clean"},{k:"crowd",l:"Crowd"},{k:"value",l:"Value"},{k:"parking",l:"Parking"}];
     const equipKeys = [{k:"powerRacks",l:"Power Racks"},{k:"deadliftPlatform",l:"DL Platform"},{k:"bumperPlates",l:"Bumper Plates"},{k:"cables",l:"Cables"},{k:"dumbbells",l:"Dumbbells"},{k:"legPress",l:"Leg Press"},{k:"hackSquat",l:"Hack Squat"},{k:"pullUpBar",l:"Pull-Up Bar"},{k:"sauna",l:"Sauna"}];
@@ -921,7 +923,10 @@ function LiftForge() {
       <div style={{padding:"16px 16px 96px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
           <h1 style={{fontFamily:S.fontDisplay,fontSize:32}}><span style={{color:S.accent}}>MY</span> GYMS</h1>
-          {gyms.length>=2 && <button onClick={()=>setShowCompare(true)} style={{...S.btn,background:"transparent",color:S.muted,border:`1px solid ${S.border}`,fontSize:11}}>{Icons.compare({size:14})} Compare</button>}
+          <div style={{display:"flex",gap:8}}>
+            {gyms.length>=2 && <button onClick={()=>setShowCompare(true)} style={{...S.btn,background:"transparent",color:S.muted,border:`1px solid ${S.border}`,fontSize:11}}>{Icons.compare({size:14})} Compare</button>}
+            <button onClick={()=>{setEditGym(null);setShowGymForm(true)}} style={{...S.btn,background:S.accent,color:S.bg,fontSize:11}}>{Icons.plus({size:14})} Add</button>
+          </div>
         </div>
 
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -972,6 +977,10 @@ function LiftForge() {
                       <p style={{fontSize:13,color:S.text,lineHeight:1.5}}>{gym.notes}</p>
                     </div>
                   )}
+                  <div style={{display:"flex",gap:8,marginTop:12}}>
+                    <button onClick={()=>{setEditGym(gym);setShowGymForm(true)}} style={{...S.btn,flex:1,background:"transparent",color:S.muted,border:`1px solid ${S.border}`,fontSize:11}}>{Icons.edit({size:12})} Edit</button>
+                    <button onClick={()=>{if(confirm("Delete "+gym.name+"?"))setGyms(prev=>prev.filter(g=>g.id!==gym.id))}} style={{...S.btn,background:"transparent",color:S.red,border:`1px solid ${S.red}33`,fontSize:11,padding:"8px 16px"}}>{Icons.trash({size:12})} Delete</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1014,11 +1023,84 @@ function LiftForge() {
             )}
           </div>
         </Modal>
+
+        {/* Gym Form Modal */}
+        <Modal open={showGymForm} onClose={()=>setShowGymForm(false)} title={editGym ? "Edit Gym" : "Add Gym"}>
+          <GymForm gym={editGym} onSave={(data)=>{
+            if(editGym){
+              setGyms(prev=>prev.map(g=>g.id===editGym.id?{...g,...data}:g));
+            } else {
+              setGyms(prev=>[...prev,{...data,id:uid(),visits:0,lastVisit:null}]);
+            }
+            setShowGymForm(false);
+          }}/>
+        </Modal>
       </div>
     );
   }
 
-  // --- INFLUENCER ---
+  function GymForm({gym, onSave}) {
+    const ratingKeys = [{k:"equipment",l:"Equipment"},{k:"atmosphere",l:"Vibe"},{k:"cleanliness",l:"Clean"},{k:"crowd",l:"Crowd"},{k:"value",l:"Value"},{k:"parking",l:"Parking"}];
+    const equipKeys = [{k:"powerRacks",l:"Power Racks"},{k:"deadliftPlatform",l:"DL Platform"},{k:"bumperPlates",l:"Bumper Plates"},{k:"cables",l:"Cables"},{k:"dumbbells",l:"Dumbbells"},{k:"legPress",l:"Leg Press"},{k:"hackSquat",l:"Hack Squat"},{k:"pullUpBar",l:"Pull-Up Bar"},{k:"sauna",l:"Sauna"}];
+    const [name, setName] = useState(gym?.name||"");
+    const [location, setLoc] = useState(gym?.location||"");
+    const [cost, setCost] = useState(gym?.cost||0);
+    const [hours, setHours] = useState(gym?.hours||"");
+    const [notes, setNotes] = useState(gym?.notes||"");
+    const [ratings, setRatings] = useState(gym?.ratings||{equipment:3,atmosphere:3,cleanliness:3,crowd:3,value:3,parking:3});
+    const [equip, setEquip] = useState(gym?.equip||{powerRacks:false,deadliftPlatform:false,bumperPlates:false,cables:false,dumbbells:false,legPress:false,hackSquat:false,pullUpBar:false,sauna:false});
+    return (
+      <div style={{padding:16,display:"flex",flexDirection:"column",gap:16}}>
+        <div>
+          <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:4}}>NAME</label>
+          <input style={{width:"100%",background:"#12121a",border:"1px solid #2a2a3d",borderRadius:10,padding:"10px 12px",color:"#e8e8f0",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none"}} value={name} onChange={e=>setName(e.target.value)} placeholder="Iron Paradise"/>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:4}}>LOCATION</label>
+          <input style={{width:"100%",background:"#12121a",border:"1px solid #2a2a3d",borderRadius:10,padding:"10px 12px",color:"#e8e8f0",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none"}} value={location} onChange={e=>setLoc(e.target.value)} placeholder="City, TX"/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div>
+            <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:4}}>$/MONTH</label>
+            <input type="number" style={{width:"100%",background:"#12121a",border:"1px solid #2a2a3d",borderRadius:10,padding:"10px 12px",color:"#e8e8f0",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none"}} value={cost||""} onChange={e=>setCost(Number(e.target.value))}/>
+          </div>
+          <div>
+            <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:4}}>HOURS</label>
+            <input style={{width:"100%",background:"#12121a",border:"1px solid #2a2a3d",borderRadius:10,padding:"10px 12px",color:"#e8e8f0",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none"}} value={hours} onChange={e=>setHours(e.target.value)} placeholder="24/7"/>
+          </div>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:8}}>RATINGS</label>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {ratingKeys.map(r=>(
+              <div key={r.k} style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={{fontSize:12,color:"#e8e8f0"}}>{r.l}</span>
+                <StarRating value={ratings[r.k]||3} onChange={v=>setRatings(prev=>({...prev,[r.k]:v}))} size={18}/>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:8}}>EQUIPMENT</label>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            {equipKeys.map(e=>(
+              <label key={e.k} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#e8e8f0",cursor:"pointer"}}>
+                <input type="checkbox" checked={equip[e.k]||false} onChange={ev=>setEquip(prev=>({...prev,[e.k]:ev.target.checked}))} style={{accentColor:"#00d4ff"}}/>
+                {e.l}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:"#8888a0",fontFamily:"'Oswald',sans-serif",letterSpacing:"0.1em",display:"block",marginBottom:4}}>NOTES</label>
+          <textarea style={{width:"100%",background:"#12121a",border:"1px solid #2a2a3d",borderRadius:10,padding:"10px 12px",color:"#e8e8f0",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none",resize:"none",height:80}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Best squat rack in town..."/>
+        </div>
+        <button onClick={()=>onSave({name,location,cost,hours,notes,ratings,equip})} disabled={!name} style={{padding:"14px 16px",borderRadius:10,fontFamily:"'Oswald',sans-serif",fontWeight:600,fontSize:14,letterSpacing:"0.05em",border:"none",cursor:"pointer",background:name?"#00d4ff":"#2a2a3d",color:name?"#0a0a0f":"#8888a0",width:"100%"}}>
+          {gym ? "Save Changes" : "Add Gym"}
+        </button>
+      </div>
+    );
+  }
   function InfluencerPage() {
     const canvasRef = useRef(null);
     const [selPR, setSelPR] = useState(prs[0]?.exerciseId??"");
